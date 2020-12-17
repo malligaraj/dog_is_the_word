@@ -3,19 +3,15 @@ import asyncio
 import uvicorn
 import os
 import sys
-import requests
 from pathlib import Path
-from fastai import *
-from fastai.vision import *
-# from fastai.vision.all import *
-from io import BytesIO
+from fastai.vision.all import *
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import HTMLResponse, JSONResponse
 from starlette.staticfiles import StaticFiles
 
-export_file_url = 'https://www.googleapis.com/drive/v3/files/1ntlwwv3Ao3kLJ_VaXgI6Gx3_01HG1Zbz?alt=media&key=AIzaSyA1CbVi3ynikmMs4KXq1xXnHSol27UaQ2U'
-export_file_name = 'export.pkl'
+export_file_url = 'https://www.googleapis.com/drive/v3/files/1KgRs1fpWCqkjGNHhJfQb_QsA5kyVNnF4?alt=media&key=AIzaSyA1CbVi3ynikmMs4KXq1xXnHSol27UaQ2U'
+export_file_name = 'model.pkl'
 
 Port = int(os.environ.get('PORT', 5000))
 
@@ -37,8 +33,9 @@ async def download_file(url, dest):
 
 async def setup_learner():
     await download_file(export_file_url, path / export_file_name)
+    model_path = path/export_file_name
     try:
-        learn = load_learner(path, export_file_name)
+        learn = load_learner(model_path, cpu=True)
         return learn
     except RuntimeError as e:
         if len(e.args) > 0 and 'CPU-only machine' in e.args[0]:
@@ -65,9 +62,9 @@ async def homepage(request):
 async def analyze(request):
     img_data = await request.form()
     img_bytes = await (img_data['file'].read())
-    img = open_image(BytesIO(img_bytes))
-    prediction = learn.predict(img)[0]
-    return JSONResponse({'result': str(prediction)})
+    img = PILImage.create(img_bytes)
+    prediction = learn.predict(img)
+    return JSONResponse({'result': str(prediction[0])})
 
 
 if __name__ == '__main__':
